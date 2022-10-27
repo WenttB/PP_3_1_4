@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 
 
 @Service
+@Transactional(readOnly = true)
 public class UserServiceImpl implements UserService {
 
  private final UserRepository userRepository;
@@ -73,7 +74,7 @@ public class UserServiceImpl implements UserService {
   editUser.setPassword(passwordEncoder.encode(user.getPassword()));
   userRepository.save(editUser);
  }
-
+@Transactional
  public void removeUserById(Integer id) {
   userRepository.deleteById(id);
  }
@@ -87,7 +88,6 @@ public class UserServiceImpl implements UserService {
  }
 
  @Override
- @Transactional
  public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
   User user = findByUsername(username);
   if (user == null) {
