@@ -20,15 +20,14 @@ import java.util.List;
 public class UserServiceImpl implements UserService {
  private final RoleServiceImpl roleService;
  private final UserRepository userRepository;
- private final RoleRepository roleRepository;
 
+ private final RoleRepository roleRepository;
  private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
  @Autowired
  public UserServiceImpl(RoleServiceImpl roleService, UserRepository userRepository, RoleRepository roleRepository) {
   this.roleService = roleService;
   this.userRepository = userRepository;
-
   this.roleRepository = roleRepository;
  }
 
@@ -60,7 +59,7 @@ public class UserServiceImpl implements UserService {
  public User getUserById(Integer id) {
   return userRepository.getById(id);
  }
-@Transactional
+
  public User findByUsername(String username) {
   return userRepository.findByUsername(username);
  }
