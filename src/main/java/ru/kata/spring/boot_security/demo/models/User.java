@@ -1,6 +1,8 @@
 package ru.kata.spring.boot_security.demo.models;
 
 
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -30,10 +32,13 @@ public class User implements UserDetails {
     @Column(name = "password")
     private String password;
 
-    @ManyToMany(cascade = CascadeType.ALL)
-    @JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id"))
-    private Set<Role> roles;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+        @Fetch(FetchMode.JOIN)
+        @JoinTable(name = "user_roles",
+                joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"),
+                inverseJoinColumns = @JoinColumn(name = "role_id", referencedColumnName = "id"))
+        private Set<Role> roles;
 
     public void setRoles(Set<Role> roles) {
         this.roles = roles;
@@ -130,6 +135,15 @@ public class User implements UserDetails {
     }
 
     @Override
+    public String toString() {
+        return "User{" +
+                "name='" + username + '\'' +
+                ", lastName='" + lastName + '\'' +
+                ", age=" + age +
+                '}';
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
@@ -140,14 +154,5 @@ public class User implements UserDetails {
     @Override
     public int hashCode() {
         return Objects.hash(id, username, lastName, age, password, roles);
-    }
-
-    @Override
-    public String toString() {
-        return "User{" +
-                "name='" + username + '\'' +
-                ", lastName='" + lastName + '\'' +
-                ", age=" + age +
-                '}';
     }
 }

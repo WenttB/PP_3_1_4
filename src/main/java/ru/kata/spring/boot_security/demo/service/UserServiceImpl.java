@@ -1,35 +1,35 @@
 package ru.kata.spring.boot_security.demo.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.kata.spring.boot_security.demo.exceptions.UserException;
 import ru.kata.spring.boot_security.demo.models.Role;
 import ru.kata.spring.boot_security.demo.models.User;
+import ru.kata.spring.boot_security.demo.repository.RoleRepository;
 import ru.kata.spring.boot_security.demo.repository.UserRepository;
 
 import javax.annotation.PostConstruct;
-import java.util.Collection;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 
 @Service
 @Transactional(readOnly = true)
 public class UserServiceImpl implements UserService {
-
+ private final RoleServiceImpl roleService;
  private final UserRepository userRepository;
+ private final RoleRepository roleRepository;
+
  private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
  @Autowired
- public UserServiceImpl(UserRepository userRepository) {
+ public UserServiceImpl(RoleServiceImpl roleService, UserRepository userRepository, RoleRepository roleRepository) {
+  this.roleService = roleService;
   this.userRepository = userRepository;
+
+  this.roleRepository = roleRepository;
  }
 
  public List<User> getAllUsers() {
@@ -37,43 +37,21 @@ public class UserServiceImpl implements UserService {
  }
 
  @Transactional
- public User saveUser(User user, String role) {
-  User newUser = new User();
-  Set<Role> roles;
-  if (role.equals("ROLE_ADMIN")) {
-   roles = Set.of(new Role(user.getId(), "ROLE_USER"), new Role(user.getId(), "ROLE_ADMIN"));
-  } else {
-   roles = Set.of(new Role(user.getId(), "ROLE_USER"));
+ public void saveUser(User user) {
+  if (userRepository.findByUsername(user.getUsername()) != null &&
+          userRepository.findByUsername(user.getUsername()).getId() != user.getId()) {
+   throw new UserException(user);
   }
-  newUser.setRoles(roles);
-  newUser.setName(user.getName());
-  newUser.setLastName(user.getLastName());
-  newUser.setAge(user.getAge());
-  newUser.setPassword(user.getPassword());
-  newUser.setRoles(roles);
-  newUser.setId(user.getId());
-  newUser.setPassword(passwordEncoder.encode(user.getPassword()));
-  return userRepository.save(newUser);
+  if (user.getId() != null &&
+          userRepository.findById(user.getId()).get().getPassword().equals(user.getPassword())) {
+   user.setPassword(userRepository.findById(user.getId()).get().getPassword());
+  } else {
+   user.setPassword(passwordEncoder.encode(user.getPassword()));
+  }
+  userRepository.save(user);
  }
 
- @Transactional
- public void edit(User user, Integer id, String role) {
-  Set<Role> rolesToChange;
-  if (role.equals("ROLE_ADMIN")) {
-   rolesToChange = Set.of(new Role(1, "ROLE_USER"),new Role(2, "ROLE_ADMIN"));
-  } else {
-   rolesToChange = Set.of(new Role(1, "ROLE_USER"));
-  }
 
-  User editUser = new User();
-  editUser.setName(user.getName());
-  editUser.setLastName(user.getLastName());
-  editUser.setAge(user.getAge());
-  editUser.setRoles(rolesToChange);
-  editUser.setId(id);
-  editUser.setPassword(passwordEncoder.encode(user.getPassword()));
-  userRepository.save(editUser);
- }
 @Transactional
  public void removeUserById(Integer id) {
   userRepository.deleteById(id);
@@ -82,24 +60,16 @@ public class UserServiceImpl implements UserService {
  public User getUserById(Integer id) {
   return userRepository.getById(id);
  }
-
+@Transactional
  public User findByUsername(String username) {
   return userRepository.findByUsername(username);
  }
 
- @Override
- public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-  User user = findByUsername(username);
-  if (user == null) {
-   throw new UsernameNotFoundException(String.format("User '%s' not found", username));
-  }
-  return new org.springframework.security.core.userdetails.User(user.getUsername(), user.getPassword(),
-          mapRolesToAuthorities(user.getRoles()));
+ public List<Role> listRoles() {
+  return roleService.getAllRoles();
  }
 
- private Collection<? extends GrantedAuthority> mapRolesToAuthorities(Collection<Role> roles) {
-  return roles.stream().map(role -> new SimpleGrantedAuthority(role.getName())).collect(Collectors.toList());
- }
+
 
  //Добавление пользователя для теста функционала
  @PostConstruct
